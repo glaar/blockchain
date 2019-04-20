@@ -190,6 +190,28 @@ class Blockchain:
         guess_hash = hashlib.sha256(guess).hexdigest()
         return guess_hash[:4] == "0000"
 
+    def get_amount(self, way, userID):
+        if way == "inn":
+            way = "recipient"
+        else:
+            way = "sender"
+
+        amount = 0
+        for item in self.chain:
+            for key in item:
+                if key == "transactions":
+                    for t_item in item[key]:
+                        if t_item[way] == userID:
+                            for element in t_item:
+                                if element == "amount":
+                                    amount += t_item[element]
+                                if way == "out":
+                                    amount = amount * -1
+        return amount
+
+    def get_sum(self, userID):
+        return self.get_amount("inn", userID) - self.get_amount("out", userID)
+
 
 # Instantiate the Node
 app = Flask(__name__)
@@ -289,6 +311,53 @@ def consensus():
 
     return jsonify(response), 200
 
+
+@app.route('/hello', methods=['GET'])
+def hello():
+
+    response = {
+        'message': 'Our chain is authoritative',
+        'chain': 'hey'
+    }
+
+    return jsonify(response), 200
+
+
+@app.route('/sum', methods=['POST'])
+def get_sum():
+    values = request.get_json()
+
+    # Check that the required fields are in the POST'ed data
+    required = ['userid']
+    if not all(k in values for k in required):
+        return 'Missing values', 400
+
+    # Create a new Transaction
+    user = values['userid']
+    print(user)
+
+    amount = blockchain.get_sum(user)
+
+    response = {'message': f'{user} has {amount}'}
+    return jsonify(response), 201
+
+@app.route('/sendt', methods=['POST'])
+def get_amount():
+    values = request.get_json()
+
+    # Check that the required fields are in the POST'ed data
+    required = ['userid']
+    if not all(k in values for k in required):
+        return 'Missing values', 400
+
+    # Create a new Transaction
+    user = values['userid']
+    print(user)
+
+    amount = blockchain.getAmount(user)
+
+    response = {'message': f'{user} has {amount}'}
+    return jsonify(response), 201
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
